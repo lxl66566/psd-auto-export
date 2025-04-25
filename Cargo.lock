@@ -874,6 +874,7 @@ dependencies = [
  "notify",
  "pretty_env_logger",
  "psd",
+ "rayon",
  "walkdir",
 ]
 

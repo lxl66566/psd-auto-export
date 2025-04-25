@@ -9,10 +9,11 @@
 ## 使用方法
 
 ```bash
-pae /path/to/your/psd/folder        # 监听文件夹
-pae /path/to/your/single/file.psd   # 监听单个文件
-pae /path/to/your/psd/folder --once # 导出一次所有 PSD 文件
-pae /path/to/your/psd/folder -f jpg # 导出为 JPG 格式
+pae /path/to/your/psd/folder                # 监听文件夹
+pae /path/to/your/single/file.psd           # 监听单个文件
+pae /path/to/your/psd/folder --once         # 导出一次所有 PSD 文件
+pae /path/to/your/psd/folder -f jpg         # 导出为 JPG 格式
+pae -h                                      # 查看帮助
 ```
 
-导出的 PNG 文件会保存在 PSD 文件所在的同一目录下，与 PSD 文件同名。
+导出的图片文件会保存在 PSD 文件所在的同一目录下，与 PSD 文件同名。

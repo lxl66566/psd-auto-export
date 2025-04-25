@@ -12,6 +12,7 @@ use image::{ImageBuffer, ImageFormat, Rgba};
 use log::{LevelFilter, error, info};
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use psd::Psd;
+use rayon::prelude::*;
 use walkdir::WalkDir;
 
 // 定义防抖间隔，这里是 100 毫秒 (0.1 秒)
@@ -22,6 +23,11 @@ const DEBOUNCE_DURATION: Duration = Duration::from_millis(100);
 enum ExportFormat {
     Png,
     Jpg,
+    Bmp,
+    Webp,
+    Tiff,
+    Avif,
+    Ico,
 }
 
 impl ExportFormat {
@@ -30,6 +36,11 @@ impl ExportFormat {
         match self {
             ExportFormat::Png => "png",
             ExportFormat::Jpg => "jpg",
+            ExportFormat::Bmp => "bmp",
+            ExportFormat::Webp => "webp",
+            ExportFormat::Tiff => "tiff",
+            ExportFormat::Avif => "avif",
+            ExportFormat::Ico => "ico",
         }
     }
 
@@ -38,12 +49,16 @@ impl ExportFormat {
         match self {
             ExportFormat::Png => ImageFormat::Png,
             ExportFormat::Jpg => ImageFormat::Jpeg,
+            ExportFormat::Bmp => ImageFormat::Bmp,
+            ExportFormat::Webp => ImageFormat::WebP,
+            ExportFormat::Tiff => ImageFormat::Tiff,
+            ExportFormat::Avif => ImageFormat::Avif,
+            ExportFormat::Ico => ImageFormat::Ico,
         }
     }
 }
 
-/// 监听指定路径下的 PSD 文件变化（支持文件夹递归或单个文件）并自动导出为
-/// PNG/JPG
+/// 监听指定路径下的 PSD 文件变化（支持文件夹递归或单文件）并自动导出为指定格式
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -84,36 +99,23 @@ fn main() -> Result<()> {
         let psd_files = find_psd_files(&watch_path)?;
         info!("找到 {} 个 .psd 文件。", psd_files.len());
 
-        let mut handles = vec![];
-
         if psd_files.is_empty() {
             info!("没有找到需要导出的 .psd 文件。");
         } else {
-            for psd_path in psd_files {
-                info!("正在安排导出文件：{:?}", psd_path);
-                let psd_path_clone = psd_path.clone();
-                let export_format_clone = export_format.clone(); // 克隆格式参数
-                let handle = thread::spawn(move || {
-                    info!("正在导出文件：{:?}", psd_path_clone);
-                    match process_psd_file(&psd_path_clone, &export_format_clone) {
-                        Ok(_) => info!(
-                            "成功导出：{:?} -> {:?}",
-                            psd_path_clone,
-                            psd_path_clone.with_extension(export_format_clone.extension())
-                        ),
-                        Err(e) => error!("导出文件失败 {:?}: {}", psd_path_clone, e),
-                    }
-                });
-                handles.push(handle);
-            }
-
-            // 等待所有处理线程完成
-            for handle in handles {
-                handle.join().expect("处理线程崩溃");
-            }
+            // 使用 rayon 的并行迭代器处理文件
+            psd_files.par_iter().for_each(|psd_path| {
+                info!("正在导出文件：{:?}", psd_path);
+                match process_psd_file(psd_path, &export_format) {
+                    Ok(_) => info!(
+                        "成功导出：{:?} -> {:?}",
+                        psd_path,
+                        psd_path.with_extension(export_format.extension())
+                    ),
+                    Err(e) => error!("导出文件失败 {:?}: {}", psd_path, e),
+                }
+            });
             info!("一次性导出完成。");
         }
-
         Ok(()) // 一次性模式完成后退出
     } else {
         // 持续监听模式
