@@ -1,0 +1,25 @@
+[package]
+edition = "2024"
+name    = "psd-auto-export"
+version = "0.1.0"
+
+[dependencies]
+anyhow            = "1"
+clap              = { version = "4.0", features = ["derive"] }
+image             = "0.25"
+log               = "0.4"
+notify            = "8.0"
+pretty_env_logger = "0.5"
+psd               = "0.3.5"
+walkdir           = "2.5"
+# backon = "1.5.0"
+
+[[bin]]
+name = "pae"
+path = "src/main.rs"
+
+[profile.release]
+lto       = true
+opt-level = "z"
+panic     = "abort"
+strip     = true
