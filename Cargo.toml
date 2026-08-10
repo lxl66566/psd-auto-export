@@ -1,7 +1,20 @@
 [package]
-edition = "2024"
-name    = "psd-auto-export"
-version = "0.1.0"
+name         = "psd-auto-export"
+version      = "0.1.1"
+edition      = "2024"
+rust-version = "1.85"
+description  = "Watch PSD files and auto-export them to common image formats"
+keywords     = ["psd", "watch", "export", "convert"]
+categories   = ["command-line-utilities", "multimedia::images"]
+readme       = "README.md"
+homepage     = "https://github.com/lxl66566/psd-auto-export"
+repository   = "https://github.com/lxl66566/psd-auto-export"
+license      = "MIT OR Apache-2.0"
+include      = ["/CHANGELOG.md", "/LICENSE-*", "/README.md", "/benches/**", "/src/**", "/tests/**"]
+
+[[bin]]
+name = "pae"
+path = "src/main.rs"
 
 [dependencies]
 anyhow            = "1"
@@ -11,16 +24,27 @@ log               = "0.4"
 notify            = "8.2"
 pretty_env_logger = "0.5"
 psd               = "0.3.5"
-rayon = "1.12.0"
+rayon             = "1.12.0"
 walkdir           = "2.5"
 # backon = "1.5.0"
 
-[[bin]]
-name = "pae"
-path = "src/main.rs"
+[lints.clippy]
+all                     = { level = "warn", priority = -1 }
+cargo                   = { level = "warn", priority = -1 }
+doc_markdown            = "allow"
+missing_errors_doc      = "allow"
+missing_panics_doc      = "allow"
+multiple_crate_versions = "allow"
+pedantic                = { level = "warn", priority = -1 }
+wildcard_imports        = "allow"
 
+[lints.rust]
+unsafe_code           = "allow"
+unused_qualifications = "warn"
+
+# If you are building bin target, uncomment this
 [profile.release]
-lto       = true
-opt-level = "z"
-panic     = "abort"
+opt-level = "s"
 strip     = true
+lto       = true
+panic     = "abort"

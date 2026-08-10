@@ -89,7 +89,7 @@ fn main() -> Result<()> {
 
     // 检查监听路径是否存在
     if !watch_path.exists() {
-        error!("错误：指定的路径不存在：{:?}", watch_path);
+        error!("错误：指定的路径不存在：{watch_path:?}");
         std::process::exit(1);
     }
 
@@ -104,14 +104,14 @@ fn main() -> Result<()> {
         } else {
             // 使用 rayon 的并行迭代器处理文件
             psd_files.par_iter().for_each(|psd_path| {
-                info!("正在导出文件：{:?}", psd_path);
+                info!("正在导出文件：{psd_path:?}");
                 match process_psd_file(psd_path, &export_format) {
-                    Ok(_) => info!(
+                    Ok(()) => info!(
                         "成功导出：{:?} -> {:?}",
                         psd_path,
                         psd_path.with_extension(export_format.extension())
                     ),
-                    Err(e) => error!("导出文件失败 {:?}: {}", psd_path, e),
+                    Err(e) => error!("导出文件失败 {psd_path:?}: {e}"),
                 }
             });
             info!("一次性导出完成。");
@@ -122,22 +122,19 @@ fn main() -> Result<()> {
 
         // 根据路径类型确定监听模式
         let recursive_mode = if watch_path.is_dir() {
-            info!("开始递归监听目录：{:?}", watch_path);
+            info!("开始递归监听目录：{watch_path:?}");
             RecursiveMode::Recursive
         } else if watch_path.is_file() {
             // 如果是文件，检查是否是 .psd 文件
             if watch_path.extension().and_then(|ext| ext.to_str()) != Some("psd") {
-                error!(
-                    "错误：指定的路径是一个文件，但不是 .psd 文件：{:?}",
-                    watch_path
-                );
+                error!("错误：指定的路径是一个文件，但不是 .psd 文件：{watch_path:?}");
                 std::process::exit(1);
             }
-            info!("开始监听单个文件：{:?}", watch_path);
+            info!("开始监听单个文件：{watch_path:?}");
             RecursiveMode::NonRecursive // 监听单个文件不需要递归
         } else {
             // 既不是文件也不是目录，报错退出
-            error!("错误：指定的路径既不是文件也不是目录：{:?}", watch_path);
+            error!("错误：指定的路径既不是文件也不是目录：{watch_path:?}");
             std::process::exit(1);
         };
 
@@ -151,11 +148,11 @@ fn main() -> Result<()> {
         // 开始监听指定的路径，根据类型使用不同的模式
         watcher
             .watch(&watch_path, recursive_mode)
-            .context(format!("无法监听路径：{:?}", watch_path))?;
+            .context(format!("无法监听路径：{watch_path:?}"))?;
 
         info!("监听器已启动。等待 .psd 文件创建或修改...");
-        info!("导出格式：{:?}", export_format);
-        info!("防抖间隔设置为：{:?}", DEBOUNCE_DURATION);
+        info!("导出格式：{export_format:?}");
+        info!("防抖间隔设置为：{DEBOUNCE_DURATION:?}");
 
         // 使用 Arc<Mutex<HashMap>>
         // 来存储每个文件上次导出的时间，以便在多个线程间安全共享
@@ -184,13 +181,13 @@ fn main() -> Result<()> {
                                 if let Some(last_time) = map.get(&path) {
                                     // 如果距离上次导出时间小于防抖间隔，则忽略此事件
                                     if now.duration_since(*last_time) < DEBOUNCE_DURATION {
-                                        info!("文件 {:?} 在防抖间隔内，忽略事件。", path);
+                                        info!("文件 {path:?} 在防抖间隔内，忽略事件。");
                                         continue; // 跳过当前路径的导出
                                     }
                                 }
 
                                 // 如果是第一次导出，或者距离上次导出时间已超过防抖间隔
-                                info!("检测到 .psd 文件事件：{:?}", path);
+                                info!("检测到 .psd 文件事件：{path:?}");
 
                                 // 更新该文件的导出时间
                                 map.insert(path.clone(), now);
@@ -204,25 +201,25 @@ fn main() -> Result<()> {
 
                                 // 在新线程中处理 PSD 到 PNG 的转换
                                 thread::spawn(move || {
-                                    std::thread::sleep(Duration::from_millis(10)); // 避免 psd 还未写入就开始读取，然后失败。
-                                    info!("正在导出文件：{:?}", psd_path_clone);
+                                    thread::sleep(Duration::from_millis(10)); // 避免 psd 还未写入就开始读取，然后失败。
+                                    info!("正在导出文件：{psd_path_clone:?}");
                                     match process_psd_file(&psd_path_clone, &export_format_clone) {
-                                        Ok(_) => info!(
+                                        Ok(()) => info!(
                                             "成功导出：{:?} -> {:?}",
                                             psd_path_clone,
                                             psd_path_clone
                                                 .with_extension(export_format_clone.extension())
                                         ),
                                         Err(e) => {
-                                            error!("导出文件失败 {:?}: {}", psd_path_clone, e)
-                                        }
+                                            error!("导出文件失败 {psd_path_clone:?}: {e}");
+                                        },
                                     }
                                 });
                             }
                         }
                     }
-                }
-                Err(e) => error!("监听事件错误：{}", e),
+                },
+                Err(e) => error!("监听事件错误：{e}"),
             }
         }
 
@@ -242,7 +239,10 @@ fn find_psd_files(path: &Path) -> Result<Vec<PathBuf>> {
             psd_files.push(path.to_path_buf());
         }
     } else if path.is_dir() {
-        for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
+        for entry in WalkDir::new(path)
+            .into_iter()
+            .filter_map(std::result::Result::ok)
+        {
             let entry_path = entry.path();
             if entry_path.is_file()
                 && entry_path.extension().and_then(|ext| ext.to_str()) == Some("psd")
@@ -263,11 +263,10 @@ fn process_psd_file(psd_path: &Path, format: &ExportFormat) -> Result<()> {
     let output_path = psd_path.with_extension(format.extension());
 
     // 读取 PSD 文件内容
-    let psd_bytes =
-        std::fs::read(psd_path).context(format!("无法读取 PSD 文件：{:?}", psd_path))?;
+    let psd_bytes = std::fs::read(psd_path).context(format!("无法读取 PSD 文件：{psd_path:?}"))?;
 
     // 解析 PSD 数据
-    let psd = Psd::from_bytes(&psd_bytes).context(format!("无法解析 PSD 文件：{:?}", psd_path))?;
+    let psd = Psd::from_bytes(&psd_bytes).context(format!("无法解析 PSD 文件：{psd_path:?}"))?;
 
     // 获取合并后的最终图像数据 (RGBA 格式)
     let final_image_data: Vec<u8> = psd.rgba();
@@ -281,11 +280,11 @@ fn process_psd_file(psd_path: &Path, format: &ExportFormat) -> Result<()> {
     // image crate 的 save 方法可以根据文件扩展名自动选择格式，
     // 但为了明确控制格式（特别是 JPEG 质量），我们使用 write_to
     let mut file = std::fs::File::create(&output_path)
-        .context(format!("无法创建输出文件：{:?}", output_path))?;
+        .context(format!("无法创建输出文件：{output_path:?}"))?;
 
     img_buffer
         .write_to(&mut file, format.image_format())
-        .context(format!("无法保存图像文件：{:?}", output_path))?;
+        .context(format!("无法保存图像文件：{output_path:?}"))?;
 
     Ok(())
 }
